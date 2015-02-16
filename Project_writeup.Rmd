@@ -153,7 +153,6 @@ confusionMatrix(PredictResultCT, myTestingClean$classe)
 ## Balanced Accuracy      0.7703  0.63670  0.64650   0.5000  0.72049
 ```
 
-![plot of chunk unnamed-chunk-6-2](Project_files/figure-html/unnamed-chunk-6-2.png)
 
 The rpart model is 49.7% accurate on the training data, which is not very accurate.
 
