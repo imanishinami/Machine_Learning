@@ -1,0 +1,104 @@
+---
+title: "Project"
+author: "Nami"
+date: "Sunday, February 15, 2015"
+output: html_document
+---
+
+###Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+###Loading data and Preprocessing 
+
+I load and process the data into a format suitable for my analysis. I replaced the missing data into "NA".
+
+```{r}
+TrainingUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+TestingUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+TrainingData <- read.csv(url(TrainingUrl), na.strings=c("NA","#DIV/0!",""))
+TestingData <- read.csv(url(TestingUrl), na.strings=c("NA","#DIV/0!",""))
+```
+
+load libraries.
+
+```{r}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+```
+
+
+Load the same seed with the following line of code and split data into two sets; 75% data is for the training data and reserved 25% for cross-validation.
+Delete irrelevant variables such as; user_name, raw_timestamp_part_1, raw_timestamp_part_,2 cvtd_timestamp, new_window, and  num_window.
+
+```{r}
+set.seed(313)
+
+inTrain <- createDataPartition(TrainingData$classe, p = 3/4)[[1]] 
+myTraining <- TrainingData[inTrain,-c(1:7)]
+myTesting <- TrainingData[-inTrain, -c(1:7)]
+dim(myTraining); dim(myTesting)
+
+```
+
+I also checked how many columns include NAs.
+
+```{r}
+t <- table(colSums(is.na(myTraining)))
+t
+```
+
+53 columns have not include NAs however many of the columns include NA for almost all rows.
+I also removed those columns with many NAs.
+
+```{r}
+NA_columns <- names(myTraining[,colSums(is.na(myTraining))>14400])
+myTrainingClean = myTraining[, !names(myTraining) %in% NA_columns]
+myTestingClean = myTesting[, !names(myTesting) %in% NA_columns]
+
+```
+
+###Predicting with rpart model
+
+I used classification trees.
+
+```{r}
+myModelCT <- train(classe~., method="rpart", data=myTrainingClean)
+print(myModelCT$finalModel)
+plot(myModelCT$finalModel, uniform=TRUE, main="Classification Tree")
+text(myModelCT$finalModel, use.n=TRUE, all=TRUE, cex=.8)
+library(rattle)
+fancyRpartPlot(myModelCT$finalModel)
+PredictResultCT<-predict(myModelCT,myTestingClean)
+confusionMatrix(PredictResultCT, myTestingClean$classe)
+```
+
+![plot of chunk unnamed-chunk-6-1](Project_files/figure-html/unnamed-chunk-6-1.png) 
+![plot of chunk unnamed-chunk-6-2](Project_files/figure-html/unnamed-chunk-6-2.png)
+
+The rpart model is 49.7% accurate on the training data, which is not very accurate.
+
+
+###Predicting with random forest
+
+```{r}
+library(randomForest)
+myModel<-randomForest(classe~.,data=myTrainingClean,method="class")
+PredictResult<-predict(myModel,newdata=myTestingClean,type="class")
+confusionMatrix(PredictResult, myTestingClean$classe)
+```
+
+The Random Forest model is 99.5% accurate on the training data.
+
+###Predictions for Test data
+
+I evaluated two models and compared the accuracy. The Random Forest performed well in training set with 99.5% accuracy.
+
+
+```{r}
+predictions.test <- predict(myModel, newdata = TestingData)
+data.frame(Predictions = predictions.test)
+``` 
